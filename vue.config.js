@@ -45,5 +45,23 @@ module.exports = {
       // eslint-disable-next-line no-dupe-keys
       unknownContextCritical: false
     }
+  },
+  devServer:{
+    open: true,
+    overlay: {
+      warnings: false,
+      errors: true
+    },
+    // http://221.229.121.123:8000/bee/open-63079029343256634/bim/pavementBim/tileset.json
+    proxy: {
+      "/.*": {
+        target: 'http://221.229.121.123:8000',
+        changeOrigin: true,
+        pathRewrite: {
+          "^/": ""
+        }
+      },
+    }
   }
+
 };

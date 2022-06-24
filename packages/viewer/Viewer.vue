@@ -41,16 +41,16 @@ export default {
       vrButton,
       infoBox, //去除原生自带右上角弹窗
       selectionIndicator, //点击球体显示绿色标识框
-      // imageryProvider: new cesium.WebMapTileServiceImageryProvider({
-      //   url: "http://t0.tianditu.com/img_w/wmts?service=wmts&request=GetTile&version=1.0.0&LAYER=img&tileMatrixSet=w&TileMatrix={TileMatrix}&TileRow={TileRow}&TileCol={TileCol}&style=default&format=tiles&tk=*******",
-      //   layer: "tdtBasicLayer",
-      //   style: "default",
-      //   format: "image/jpeg",
-      //   tileMatrixSetID: "GoogleMapsCompatible",
-      //   show: false,
-      //   mininumLevel: 0,
-      //   maximumLevel: 16,
-      // }),
+      imageryProvider: new cesium.WebMapTileServiceImageryProvider({
+        url: "http://t0.tianditu.com/img_w/wmts?service=wmts&request=GetTile&version=1.0.0&LAYER=img&tileMatrixSet=w&TileMatrix={TileMatrix}&TileRow={TileRow}&TileCol={TileCol}&style=default&format=tiles&tk=3cc6a8542f24dc95c8d1b7dfba10bbd0",
+        layer: "tdtBasicLayer",
+        style: "default",
+        format: "image/jpeg",
+        tileMatrixSetID: "GoogleMapsCompatible",
+        show: false,
+        mininumLevel: 0,
+        maximumLevel: 16,
+      }),
     });
     this.$emit("ready", viewer);
   },
