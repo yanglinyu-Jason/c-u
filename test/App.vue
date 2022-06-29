@@ -1,6 +1,10 @@
 <template>
   <div id="app">
-    <cu-viewer @ready="getViewer"></cu-viewer>
+    <cu-viewer
+      style="height: 100%"
+      :defaultView="defaultView"
+      @init="initView"
+    ></cu-viewer>
   </div>
 </template>
 
@@ -9,16 +13,21 @@ let cesium = null;
 import { CuViewer } from "../packages/viewer";
 export default {
   name: "app",
+  provide() {
+    return {
+      getViewer: this.getViewer, //注意这里不加()
+    };
+  },
   data() {
     return {
       defaultView: {
-        lon: 118.7863,
-        lat: 31.9087,
-        alt: 801.6425,
-        heading: this.cesium.Math.toRadians(1.724684714172732),
-        pitch: this.cesium.Math.toRadians(-53.783141852231246),
-        roll: 0.008819224020548466,
-        range: 5000.0,
+        lon: 117.323625,
+        lat: 31.789074,
+        alt: 349685.0,
+        // heading:cesium.Math.toRadians(1.724684714172732),
+        // pitch: cesium.Math.toRadians(-53.783141852231246),
+        // roll: 0.008819224020548466,
+        // range: 5000.0,
       },
       viewer: null,
     };
@@ -26,94 +35,99 @@ export default {
   components: {
     CuViewer,
   },
-  created() {
-    cesium = this.cesium;
-  },
+  created() {},
   methods: {
-    getViewer(viewer) {
-      this.viewer = viewer;
-      this.getFlyTO(this.defaultView);
-      this.getPosition(viewer);
-      this.tilesetload(viewer);
-    },
-    getFlyTO(defaultView) {
-      // let { defaultView } = this;
-      this.viewer.camera.flyTo({
-        // fromDegrees()将经纬度和高程转换为世界坐标
-        destination: this.cesium.Cartesian3.fromDegrees(
-          defaultView.lon,
-          defaultView.lat,
-          defaultView.alt
-        ),
-        orientation: {
-          // 指向
-          heading: defaultView.heading,
-          // 视角
-          pitch: defaultView.pitch,
-          roll: defaultView.roll,
-        },
-      });
-    },
-    getPosition(viewer) {
-      var canvas = viewer.scene.canvas;
-      //具体事件的实现
-      var ellipsoid = viewer.scene.globe.ellipsoid;
-      var handler = new this.cesium.ScreenSpaceEventHandler(canvas);
-      handler.setInputAction(function (movement) {
-        //捕获椭球体，将笛卡尔二维平面坐标转为椭球体的笛卡尔三维坐标，返回球体表面的点
-        var cartesian = viewer.camera.pickEllipsoid(
-          movement.endPosition,
-          ellipsoid
-        );
-        if (cartesian) {
-          //将笛卡尔三维坐标转为地图坐标（弧度）
-          var cartographic =
-            viewer.scene.globe.ellipsoid.cartesianToCartographic(cartesian);
-          //将地图坐标（弧度）转为十进制的度数
-          var lat_String = cesium.Math.toDegrees(cartographic.latitude).toFixed(
-            4
-          );
-          var log_String = cesium.Math.toDegrees(
-            cartographic.longitude
-          ).toFixed(4);
-          var alti_String = (
-            viewer.camera.positionCartographic.height / 1000
-          ).toFixed(2);
-          var elec_String = viewer.scene.globe
-            .getHeight(cartographic)
-            .toFixed(4);
-          // console.log(lat_String, log_String, alti_String, elec_String);
-
-          // longitude_show.innerHTML = log_String;
-          // latitude_show.innerHTML = lat_String;
-          // altitude_show.innerHTML = alti_String; //视角高度 km
-          // elevation_show.innerHTML = elec_String; //海拔
-        }
-      }, this.cesium.ScreenSpaceEventType.MOUSE_MOVE);
-    },
     tilesetload(viewer) {
-      const tilesetData = viewer.scene.primitives.add(
-        new cesium.Cesium3DTileset({
-          url: 'http://221.229.121.123:8000/bee/open-63079029343256634/bim/pavementBim/tileset.json',
+      const tileSet = viewer.scene.primitives.add(
+        new this.cesium.Cesium3DTileset({
+          url: "http://221.229.121.123:8000/bee/open-63079029343256634/bim/pavementBim/tileset.json",
         })
       );
+      tileSet.readyPromise.then(function (tileSet) {
+        var longitude = 118.7863; //模型需要改变的经度
+        var latitude = 31.9087; //模型需要改变的纬度
+        var heightOffset = 801.6425; //模型需要改变的高度
 
-    //   tilesetData.readyPromise
-    //     .then(function (tileset) {
-    //       console.log('3322332',tileset)
-    //       viewer.zoomTo(
-    //         tileset,
-    //         new cesium.HeadingPitchRange(
-    //           0.5,
-    //           -0.2,
-    //           tileset.boundingSphere.radius * 4.0
-    //         )
-    //       );
-    //     })
-    //     .catch(function (error) {
-    //       console.log(error);
-    //     });
+        //获取3Dtlies的bounds范围
+        var boundingSphere = palaceTileset.boundingSphere;
+        //获取3Dtlies的范围中心点的弧度
+        var cartographic = Cesium.Cartographic.fromCartesian(
+          boundingSphere.center
+        );
+        //定义3Dtlies改变之后中心点的弧度
+        var offsetvalue = Cesium.Cartographic.fromDegrees(
+          longitude,
+          latitude,
+          heightOffset
+        );
+
+        //模型本身的位置
+        var surface = Cesium.Cartesian3.fromRadians(
+          cartographic.longitude,
+          cartographic.latitude,
+          0.0
+        );
+        //模型改变的位置
+        var offset = Cesium.Cartesian3.fromRadians(
+          offsetvalue.longitude,
+          offsetvalue.latitude,
+          heightOffset
+        );
+
+        //定义模型的改变状态
+        var translation = Cesium.Cartesian3.subtract(
+          offset,
+          surface,
+          new Cesium.Cartesian3()
+        );
+        //修改模型的位置
+        palaceTileset.modelMatrix = Cesium.Matrix4.fromTranslation(translation);
+        viewer.zoomTo(
+          palaceTileset,
+          new Cesium.HeadingPitchRange(
+            0.5,
+            -0.2,
+            palaceTileset.boundingSphere.radius * 1.0
+          )
+        );
+      });
+    },
+    update3dtilesMaxtrix(options = {}) {
+      const { Cesium } = QE;
+      const { rx, ry, rz, ps } = options;
+      const mx = Cesium.Matrix3.fromRotationX(Cesium.Math.toRadians(rx));
+      const my = Cesium.Matrix3.fromRotationY(Cesium.Math.toRadians(ry));
+      const mz = Cesium.Matrix3.fromRotationZ(Cesium.Math.toRadians(rz));
+      const rotationX = Cesium.Matrix4.fromRotationTranslation(mx);
+      const rotationY = Cesium.Matrix4.fromRotationTranslation(my);
+      const rotationZ = Cesium.Matrix4.fromRotationTranslation(mz);
+      // 平移 修改经纬度
+      const position = Cesium.Cartesian3.fromDegrees(ps.lng, ps.lat, ps.alt);
+      const m = Cesium.Transforms.eastNorthUpToFixedFrame(position);
+      // 旋转、平移矩阵相乘
+      Cesium.Matrix4.multiply(m, rotationX, m);
+      Cesium.Matrix4.multiply(m, rotationY, m);
+      Cesium.Matrix4.multiply(m, rotationZ, m);
+      // 缩放 修改缩放比例
+      // var scale = Cesium.Matrix4.fromUniformScale(this.tileModelTool.scale);
+      // Cesium.Matrix4.multiply(m, scale, m);
+      // 赋值给tileset
+      return m;
     },
   },
 };
 </script>
+<style lang="scss">
+#app {
+  width: 100%;
+  // height: 450px;
+  height: 100%;
+}
+#cesiumContainer {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+}
+</style>
